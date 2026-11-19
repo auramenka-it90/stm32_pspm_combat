@@ -53,12 +53,11 @@ float CTestGenerator_Process(CTestGenerator *t, float elapsed_time)
         break;
 
     case T_W_TRIANGLE:
-        if (phase < 0.25f) {
+        /* Continuous symmetric triangle: -A -> +A -> -A per period */
+        if (phase < 0.5f) {
             result = -t->amplitude + 4.0f * t->amplitude * phase;
-        } else if (phase < 0.75f) {
-            result = t->amplitude - 4.0f * t->amplitude * (phase - 0.25f);
         } else {
-            result = -t->amplitude + 4.0f * t->amplitude * (phase - 0.75f);
+            result = t->amplitude - 4.0f * t->amplitude * (phase - 0.5f);
         }
         result += t->offset;
         break;

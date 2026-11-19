@@ -189,13 +189,14 @@ void signal_change_handler(void *s) {
 	char *dbase  = (char *)&g_app_dbg_gen;
 	char *dwrite = (char *)s;
 	if (dwrite >= dbase && dwrite < dbase + (ptrdiff_t)sizeof(app_dbg_gen_cfg_t)) {
-		static app_dbg_gen_cfg_t dbg_shadow; // last accepted configuration
-		static bool              dbg_seeded = false;
-		if (!dbg_seeded) {
-			dbg_seeded = true;
-			dbg_shadow = g_app_dbg_gen;
-			return; // Baseline seed itself: nothing to validate yet
-		}
+		/* Shadow starts from known-valid defaults, NOT from the first write:
+		   an invalid very first value would otherwise become the baseline.
+		   Must match g_app_dbg_gen static initializer in app_tasks.c */
+		static app_dbg_gen_cfg_t dbg_shadow = {
+		    .mode   = false,
+		    .dac_ch = 1U,
+		    .gen    = { 1000.0f, 0.0f, 10.0f, T_W_NONE, 0.0f, 0U, 0.0f },
+		};
 
 		ptrdiff_t off = dwrite - dbase;
 		bool ok = true; /* mode is bool: every legal write to it is valid */

@@ -28,11 +28,12 @@
 /* Global 400 Hz control loop execution counter */
 uint32_t pspm_task_counter = 0;
 
-/* Debug waveform generator control (terminal sDBG subtree edits it live) */
+/* Debug waveform generator control (terminal sDBG subtree edits it live).
+   Defaults are in-range valid values and must match the guard shadow copy. */
 app_dbg_gen_cfg_t g_app_dbg_gen = {
     .mode   = false,
     .dac_ch = 1U,
-    .gen    = { 0.0f, 0.0f, 0.0f, T_W_NONE, 0.0f, 0U, 0.0f },
+    .gen    = { 1000.0f, 0.0f, 10.0f, T_W_NONE, 0.0f, 0U, 0.0f },
 };
 
 /* Global FPGA Bridge handle from board_support_package.c */
@@ -80,7 +81,8 @@ void app_default_task(void)
 {
     uint32_t board_faults = init_hardware();
 
-    if (board_faults != 0U) {
+    /* Non-fatal faults (BMP280) are logged only and MUST NOT stop the loop */
+    if ((board_faults & ~_B_NONFATAL_FAULTS_) != 0U) {
         /* POST failed: IC status machinery cannot be trusted with dead hardware.
            Direct blink: red FPGA LED 5 Hz + MCU green heartbeat 1 Hz. If SPI/FPGA
            is dead the FPGA LEDs stay dark; the MCU LED proves the code is alive. */
@@ -179,7 +181,7 @@ void app_freq_generator_task(void)
 
     osThreadFlagsWait(TASK_START_FLAG, osFlagsWaitAny, osWaitForever);
     last_wake_time = osKernelGetTickCount();
-    CTestGenerator_init(&g_app_dbg_gen.gen, 1000.0f, 100.0f, T_W_NONE);
+    CTestGenerator_init(&g_app_dbg_gen.gen, 1000.0f, 10.0f, T_W_NONE);
 
     for (;;) {
         /* Deterministic 1 ms grid without drift (osDelayUntil) */

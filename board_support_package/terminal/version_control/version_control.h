@@ -21,7 +21,7 @@
 #define _VC_CHIP_DESIGNATION_   "Chip:     DD1 - STM32F411RET6TR\n"
 #define _VC_SOFT_NAME_          "Software: PSPM Combat Firmware\n"
 #define _VC_SOFT_NOTE_          "SW:       produced by mr. Andrew Avramenko\n"
-#define _VC_SOFT_VERSION_       "Version:  1.0\n"
+#define _VC_SOFT_VERSION_       "Version:  2.0\n"
 
 /* ========================================================================= */
 /*  PUBLIC API                                                               */
