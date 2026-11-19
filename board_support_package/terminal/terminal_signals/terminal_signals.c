@@ -67,7 +67,7 @@ void terminal_update_dynamic_strings(void) {
 /* ========================================================================= */
 
 SIGNALS_BEGIN(DSPA_SIGNALS_NAME)
-	_STRING_R_  ("PSPM_Combat", sDEV, NULL),
+	_STRING_R_  ("Primary Signal Processing Module(PSPM)-COMBAT-", sDEV, NULL),
 		_U32_R_   ("Test hardware (0=OK)",        test_hardware_result,  &sDEV),
 		_U64_R_   ("Serial number",               dev_cfg.item.serial,   &sDEV),
 

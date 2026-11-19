@@ -82,7 +82,7 @@ void app_default_task(void)
     uint32_t board_faults = init_hardware();
 
     /* Non-fatal faults (BMP280) are logged only and MUST NOT stop the loop */
-    if ((board_faults & ~_B_NONFATAL_FAULTS_) != 0U) {
+    if ((board_faults & ~_B_NONFATAL_FAULTS_) != _B_TEST_HARDWARE_SUCCESS_) {
         /* POST failed: IC status machinery cannot be trusted with dead hardware.
            Direct blink: red FPGA LED 5 Hz + MCU green heartbeat 1 Hz. If SPI/FPGA
            is dead the FPGA LEDs stay dark; the MCU LED proves the code is alive. */
