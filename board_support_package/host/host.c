@@ -386,11 +386,14 @@ void host_send_pspm_packet(void){
     data.err_az_10 = adc->raw_16b.err_az_10;
 
     // 2. Angular Velocities W_EL & W_AZ (+-5 deg/s -> +-32768)
-    // 1 LSB = 5.0 / 32768 = 0.00015258789 deg/s
-    float raw_w_el = (rdc->pitch_speed_dps / 5.0f) * 32768.0f;
-    float raw_w_az = (rdc->roll_speed_dps / 5.0f) * 32768.0f;
-    data.w_el = (int16_t)CLAMP(raw_w_el, -32768.0f, 32767.0f);
-    data.w_az = (int16_t)CLAMP(raw_w_az, -32768.0f, 32767.0f);
+    // Direct raw int16 passthrough from FPGA AC rate channels DA21/DA22
+    // (same philosophy as err_el/err_az/gun_pos). Packet LSB equals
+    // LSB_W_EL_DPS/LSB_W_AZ_DPS (5/32768 deg/s), so the raw amplitude code
+    // transfers 1:1 with no float math. Bench-verify full-scale gain, the
+    // same caveat as GUN_POS. Hull tilt resolver rates must NEVER be routed
+    // here; they are reported separately in D[14..17] ROLL/PITCH (BAM16).
+    data.w_el = adc->raw_16b.w_el_in;
+    data.w_az = adc->raw_16b.w_az_in;
 
     // 3. Gun Position, Tank Speed, Wind Speed, Turret Cosine
     data.gun_pos = adc->raw_16b.gun_pos;

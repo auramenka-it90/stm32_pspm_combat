@@ -55,6 +55,7 @@ void FPGA_ADC_Process(const FpgaDmaTelemetryPacket_t *raw_dma) {
     g_fpga_adc_telemetry.phys.err_el_arcmin    = (float)g_fpga_adc_telemetry.raw_16b.err_el * LSB_ERR_EL_ARCMIN;
     g_fpga_adc_telemetry.phys.err_el_10_arcmin = (float)g_fpga_adc_telemetry.raw_16b.err_el_10 * LSB_ERR_EL_10_ARCMIN;
     g_fpga_adc_telemetry.phys.w_el_in_volt     = (float)g_fpga_adc_telemetry.raw_16b.w_el_in * LSB_VOLTAGE_10V;
+    g_fpga_adc_telemetry.phys.w_el_dps         = (float)g_fpga_adc_telemetry.raw_16b.w_el_in * LSB_W_EL_DPS;
     g_fpga_adc_telemetry.phys.gun_pos_deg      = (float)g_fpga_adc_telemetry.raw_16b.gun_pos * LSB_GUN_POS_DEG;
 
     // =========================================================================
@@ -84,6 +85,7 @@ void FPGA_ADC_Process(const FpgaDmaTelemetryPacket_t *raw_dma) {
     g_fpga_adc_telemetry.phys.err_az_10_arcmin  = (float)g_fpga_adc_telemetry.raw_16b.err_az_10 * LSB_ERR_AZ_10_ARCMIN;
     g_fpga_adc_telemetry.phys.da22_reserve_volt = (float)g_fpga_adc_telemetry.raw_16b.da22_reserve * LSB_VOLTAGE_10V;
     g_fpga_adc_telemetry.phys.w_az_in_volt      = (float)g_fpga_adc_telemetry.raw_16b.w_az_in * LSB_VOLTAGE_10V;
+    g_fpga_adc_telemetry.phys.w_az_dps          = (float)g_fpga_adc_telemetry.raw_16b.w_az_in * LSB_W_AZ_DPS;
 
     // =========================================================================
     // 3. SENSOR TELEMETRY CHANNELS: DA45 (4x Decimated DC Channels from FPGA)

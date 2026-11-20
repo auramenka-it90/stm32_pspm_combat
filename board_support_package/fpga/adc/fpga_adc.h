@@ -56,6 +56,14 @@ extern "C" {
 /* 1 LSB = 2.0 / 65536 = 0.000030517578 */
 #define LSB_COS_FI                   (2.0f   / 65536.0f)
 
+/* W_EL / W_AZ rate sensors: raw ADC amplitude LSB -> deg/s.
+   Full-scale input amplitude maps to the protocol range of +-5 deg/s.
+   1 LSB = 5 deg/s / 32768 = 0.00015258789 deg/s.
+   NOTE: Full-scale equality is a hardware (transducer gain) assumption,
+   bench-verify it the same way as GUN_POS. */
+#define LSB_W_EL_DPS                 (5.0f   / 32768.0f)
+#define LSB_W_AZ_DPS                 (5.0f   / 32768.0f)
+
 /* 1 LSB = 10.0V / 32768 = 0.00030517578 V */
 #define LSB_VOLTAGE_10V              (10.0f  / 32768.0f)
 
@@ -75,14 +83,14 @@ typedef struct {
         // DA21 Elevation 4AC (sync UON23): A1=ERR_EL, B1=ERR_EL1O, A2=W_EL, B2=GUN_POS
         int16_t err_el;       /* ac1 = ERR_EL    : D[0..1]   (+-400 arcmin)                    */
         int16_t err_el_10;    /* ac2 = ERR_EL1O  : D[2..3]   (+-40 arcmin)                     */
-        int16_t w_el_in;      /* ac3 = W_EL rate input (aux; packet W_EL uses resolver)        */
+        int16_t w_el_in;      /* ac3 = W_EL    : D[8..9]   (+-5 deg/s, full-scale amp)       */
         int16_t gun_pos;      /* ac4 = GUN_POS   : D[12..13] (-15..+15 deg, amplitude source)  */
 
         // DA22 Azimuth 4AC (sync UON12): A1=ERR_AZ, B1=ERR_AZ1O, A2=RESERVE, B2=W_AZ
         int16_t err_az;       /* ac1 = ERR_AZ    : D[4..5]   (+-400 arcmin)                    */
         int16_t err_az_10;    /* ac2 = ERR_AZ1O  : D[6..7]   (+-40 arcmin)                     */
         int16_t da22_reserve; /* ac3 = RESERVE (VON12 monitor)                                 */
-        int16_t w_az_in;      /* ac4 = W_AZ rate input (aux; packet W_AZ uses resolver)        */
+    int16_t w_az_in;      /* ac4 = W_AZ    : D[10..11] (+-5 deg/s, full-scale amp)       */
 
         // DA45 Telemetry 4DC: A1=SPEED_TANK, B1=COS_FI, A2=SPEED_WIND, B2=RESERVE
         int16_t v_tank;       /* dc1 = SPEED_TANK : D[18..19] (-20..+20 m/s)                   */
@@ -97,6 +105,7 @@ typedef struct {
         float err_el_arcmin;     /* Vertical Error in arcminutes                    */
         float err_el_10_arcmin;  /* Vertical Error x10 in arcminutes                */
         float w_el_in_volt;      /* W_EL analog input amplitude [V] (aux)           */
+    float w_el_dps;          /* W_EL angular rate [deg/s] = w_el_in * LSB_W_EL_DPS */
         float gun_pos_deg;       /* Gun Position in degrees (-15.0..+15.0 deg)      */
 
         // DA22 Azimuth
@@ -104,6 +113,7 @@ typedef struct {
         float err_az_10_arcmin;  /* Azimuth Error x10 in arcminutes                 */
         float da22_reserve_volt; /* RESERVE input voltage [V]                       */
         float w_az_in_volt;      /* W_AZ analog input amplitude [V] (aux)           */
+    float w_az_dps;          /* W_AZ angular rate [deg/s] = w_az_in * LSB_W_AZ_DPS */
 
         // DA45 Telemetry
         float v_tank_mps;        /* Tank Speed in m/s (-20.0..+20.0 m/s)            */
