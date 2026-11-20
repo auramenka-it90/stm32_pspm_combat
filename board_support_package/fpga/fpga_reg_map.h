@@ -197,6 +197,7 @@ extern "C" {
 #define FPGA_S_DEV_COMP_ID           5U
 
 #define REG_S_COMP_CTRL_OFF          0x00U // [RW] B15: ACK, B14: IRQ_EN, B0: EN_MEASUREMENT
+#define FPGA_COMP_CTRL_IRQ_ACK       0x8000U // W1: Release sticky err_12/err_23 error latch
 #define FPGA_COMP_CTRL_IRQ_EN        0x4000U // Enable freq-error IRQ line to interrupt controller
 #define FPGA_COMP_CTRL_EN_MEAS       0x0001U // Measurement engine enable (reset default = 1)
 #define REG_S_COMP_STATUS_OFF        0x01U // [RO] B3: ERR_23, B2: ERR_12, B1: STATE_23, B0: STATE_12
@@ -303,7 +304,9 @@ typedef struct __attribute__((packed)) {
     uint16_t period_uon23;       /* Word  32    : Phase 2-3 Period (1 LSB = 0.1 us) */
 
     /* --- 6. Sticky Error Flags (Word 33 / 16 bits) --- */
-    uint16_t status_word;        /* Word  33    : FPGA_ST_* sticky flags (cleared by snapshot) */
+    uint16_t status_word;        /* Word  33    : FPGA_ST_* sticky flags (ADC/RES self-clear by
+                                the DMA burst itself; ERR_12/ERR_23 persist until the CPU
+                                writes FPGA_COMP_CTRL_IRQ_ACK to ADDR_S_COMP_CTRL) */
 } FpgaDmaTelemetryPacket_t;
 
 /**

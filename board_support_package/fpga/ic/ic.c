@@ -172,6 +172,22 @@ bool IC_Process(uint32_t timeout_ms){
     g_frame_counter++;
     osMutexRelease(g_ic_mutex);
 
+    // 5. Release the comparator frequency-error sticky latch (CTRL B15
+    //    IRQ_ACK). Unlike the ADC/resolver stickies, which the FPGA itself
+    //    clears on every DMA burst (dma_ack), the comparator err_12/err_23
+    //    latches are CPU-only: without this write the flags keep haunting
+    //    status word 33, the rising-edge event counters freeze at their
+    //    first value and GLOBAL_ERROR in the host packet stays pinned
+    //    until a power cycle. Sent on every frame while the bits are set:
+    //    the counters still count episodes, not periods, because the edge
+    //    detector works on transitions, and EN_MEAS is re-asserted with
+    //    its current value (a 1->1 write does not restart the FSM).
+    if(local_rx.status_word & (FPGA_ST_ERR_12 | FPGA_ST_ERR_23)){
+        (void)FPGA_Write_Poll(g_hbridge, ADDR_S_COMP_CTRL,
+                              FPGA_COMP_CTRL_IRQ_ACK | FPGA_COMP_CTRL_IRQ_EN |
+                              FPGA_COMP_CTRL_EN_MEAS, 100);
+    }
+
     return g_is_400hz_valid;
 }
 
