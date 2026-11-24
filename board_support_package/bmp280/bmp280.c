@@ -29,8 +29,19 @@ BMP280_Data_t              g_bmp280_telemetry = {0};
 bool                       g_bmp280_present   = false;
 
 /* ID-watchdog bookkeeping (Process runs at 10 Hz in background task) */
-#define BMP280_HEALTH_DIV  100U          /* 100 calls @10 Hz = 1 s watchdog  */
+#define BMP280_HEALTH_DIV  10U           /* 10 calls @10 Hz = 1 s watchdog   */
 static uint8_t             s_health_div  = 0;
+static uint8_t             s_retry_div   = 0;      /* auto-reinit cadence    */
+
+/* Physical plausibility gates: a broken/flapping MISO still yields HAL_OK
+   bursts, and the Bosch formula happily turns 0xFF garbage into absurd
+   pressures (e.g. 1200 mmHg). Out-of-range frames are never published.
+   300..1100 hPa is the datasheet operating range (Key Parameters);
+   -40..+85 is the spec operating range of the part. */
+#define BMP280_PRESS_MIN_PA  30000.0f
+#define BMP280_PRESS_MAX_PA  110000.0f
+#define BMP280_TEMP_MIN_C    (-40.0f)
+#define BMP280_TEMP_MAX_C    85.0f
 
 /* ========================================================================= */
 /*  LOW-LEVEL SPI HELPERS                                                    */
@@ -101,6 +112,14 @@ static void _health_check(void) {
     } else {
         g_bmp280_present            = false;
         g_bmp280_telemetry.is_valid = false;
+        /* Drop stale/garbage numbers so the terminal shows 0 + invalid,
+           not a frozen absurd value. Force full re-init on recovery: a
+           brown-out or CS flap can leave ctrl/config at reset defaults. */
+        g_bmp280_telemetry.temperature_c = 0.0f;
+        g_bmp280_telemetry.pressure_pa   = 0.0f;
+        g_bmp280_telemetry.pressure_mmhg = 0.0f;
+        g_bmp280_telemetry.altitude_m    = 0.0f;
+        g_connected = false;
     }
 }
 
@@ -215,7 +234,19 @@ BMP280_Status_t BMP280_Process(void) {
     uint8_t raw_data[6];
     int32_t raw_press, raw_temp;
 
-    if (!g_connected) return BMP280_ERROR;
+    if (!g_connected) {
+        /* Auto-recovery: retry full bring-up once per second (handles
+           hot-plug and re-powered sensor without an MCU reset). The 30 ms
+           blocking inside BMP280_Init is acceptable at this rate: the caller
+           is the 10 Hz background task, never the 400 Hz control loop. */
+        if (++s_retry_div >= BMP280_HEALTH_DIV) {
+            s_retry_div = 0;
+            if (g_bmp_spi != NULL) {
+                (void)BMP280_Init(g_bmp_spi, g_bmp_cs);
+            }
+        }
+        return BMP280_ERROR;
+    }
 
     // Burst read 6 data registers starting at 0xF7 (Press MSB..Temp XLSB)
     if (_read_burst(BMP280_REG_PRESS_MSB, raw_data, 6) != HAL_OK) {
@@ -233,14 +264,25 @@ BMP280_Status_t BMP280_Process(void) {
     uint32_t comp_press_q24_8 = _compensate_pressure(raw_press);
 
     // Publish physical units: degC, Pa and the mmHg unit used by the BC packet
-    g_bmp280_telemetry.temperature_c = (float)comp_temp / 100.0f;
-    g_bmp280_telemetry.pressure_pa   = (float)comp_press_q24_8 / 256.0f;
-    g_bmp280_telemetry.pressure_mmhg = g_bmp280_telemetry.pressure_pa * 0.00750062f;
+    float temp_c   = (float)comp_temp / 100.0f;
+    float press_pa = (float)comp_press_q24_8 / 256.0f;
 
-    // Barometric altitude vs ISA sea-level reference (only meaningful for P > 0)
-    if (g_bmp280_telemetry.pressure_pa > 0.0f) {
-        g_bmp280_telemetry.altitude_m = 44330.0f * (1.0f - powf((g_bmp280_telemetry.pressure_pa / BMP280_SEA_LEVEL_PRESSURE_PA), 0.19029495f));
+    /* Plausibility gate: reject frames outside the physical range (broken
+       MISO gives HAL_OK + garbage). Previous numbers stay displayed but
+       the valid flag goes false. */
+    if (press_pa < BMP280_PRESS_MIN_PA || press_pa > BMP280_PRESS_MAX_PA ||
+        temp_c   < BMP280_TEMP_MIN_C   || temp_c   > BMP280_TEMP_MAX_C) {
+        g_bmp280_telemetry.is_valid = false;
+        _health_check();
+        return BMP280_ERROR;
     }
+
+    g_bmp280_telemetry.temperature_c = temp_c;
+    g_bmp280_telemetry.pressure_pa   = press_pa;
+    g_bmp280_telemetry.pressure_mmhg = press_pa * 0.00750062f;
+
+    // Barometric altitude vs ISA sea-level reference (P is > 0 after the gate)
+    g_bmp280_telemetry.altitude_m = 44330.0f * (1.0f - powf((press_pa / BMP280_SEA_LEVEL_PRESSURE_PA), 0.19029495f));
 
     g_bmp280_telemetry.is_valid = true;
 
